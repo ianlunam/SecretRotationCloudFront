@@ -1,0 +1,193 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation template to create three tiered environment.",
+
+    "Parameters": {
+        "FunctionName": {
+            "Description": "Name of the Lambda. Same as FUNCTIONNAME in build.sh",
+            "Type": "String",
+            "Default": "IanTestSecretRotation"
+        },
+        "BucketName": {
+            "Description": "S3 bucket where your code is stored. Same as BUCKETNAME in build.sh",
+            "Type": "String",
+            "Default": "digital-dev-lambda-code"
+        },
+        "SecretName": {
+            "Description": "Name of the Secret",
+            "Type": "String",
+            "Default": "TestSecretForRotation2"
+        },
+        "RotationDays": {
+            "Description": "Frequency at which to rotate the secret",
+            "Type": "Number",
+            "Default": 30
+        },
+        "CNAME": {
+            "Description": "DNS CName associated with the Cloudfront Distribution",
+            "Type": "String",
+            "Default": "www.example.com"
+        },
+        "HEADERNAME": {
+            "Description": "Custom Header defined in Cloudfront Distribution",
+            "Type": "String",
+            "Default": "headername"
+        },
+        "WACLNAME": {
+            "Description": "WAF ACL Name",
+            "Type": "String",
+            "Default": "wafacl1"
+        }
+    },
+    "Resources": {
+        "HeaderSecret": {
+            "Type": "AWS::SecretsManager::Secret",
+            "Properties": {
+                "Name": {
+                    "Ref": "SecretName"
+                },
+                "GenerateSecretString": {
+                    "PasswordLength": 30,
+                    "ExcludeCharacters": "\"@/\\"
+                }
+            }
+        },
+        "HeaderSecretRotation": {
+            "Type": "AWS::SecretsManager::RotationSchedule",
+            "DependsOn": "LambdaInvokePermission",
+            "Properties": {
+                "RotationLambdaARN": {
+                    "Fn::GetAtt": [
+                        "RotationLambda",
+                        "Arn"
+                    ]
+                },
+                "RotationRules": {
+                    "AutomaticallyAfterDays": {
+                        "Ref": "RotationDays"
+                    }
+                },
+                "SecretId": {
+                    "Ref": "HeaderSecret"
+                }
+            }
+        },
+        "RotationLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": {
+                    "Ref": "FunctionName"
+                },
+                "Runtime": "python3.7",
+                "Timeout": 30,
+                "Handler": "lambda_function.lambda_handler",
+                "Code": {
+                    "S3Bucket": {
+                        "Ref": "BucketName"
+                    },
+                    "S3Key": {
+                        "Fn::Sub": "${FunctionName}.zip"
+                    }
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaExecutionRole",
+                        "Arn"
+                    ]
+                },
+                "Environment": {
+                    "Variables": {
+                        "CNAME": {
+                            "Ref": "CNAME"
+                        },
+                        "WACLNAME": {
+                            "Ref": "WACLNAME"
+                        },
+                        "HEADERNAME": {
+                            "Ref": "HEADERNAME"
+                        }
+                    }
+                }
+            }
+        },
+        "LambdaExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["lambda.amazonaws.com"]
+                        },
+                        "Action": ["sts:AssumeRole"]
+                    }]
+                },
+                "Path": "/",
+                "ManagedPolicyArns": ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"],
+                "Policies": [{
+                    "PolicyName": "root",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                                "Effect": "Allow",
+                                "Action": [
+                                    "secretsmanager:*"
+                                ],
+                                "Resource": {
+                                    "Ref": "HeaderSecret"
+                                }
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "cloudfront:*",
+                                    "waf-regional:*",
+                                    "logs:CreateLogGroup",
+                                    "logs:CreateLogStream",
+                                    "logs:PutLogEvents"
+                                ],
+                                "Resource": "*"
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": "secretsmanager:GetRandomPassword",
+                                "Resource": "*"
+                            }
+                        ]
+                    }
+                }]
+            }
+        },
+        "LambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+            "DependsOn": "RotationLambda",
+            "Properties": {
+                "FunctionName": {
+                    "Ref": "FunctionName"
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "secretsmanager.amazonaws.com"
+            }
+        },
+        "SecretAccessResourcePolicy": {
+            "Type": "AWS::SecretsManager::ResourcePolicy",
+            "Properties": {
+                "ResourcePolicy": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": { "Fn::GetAtt": [ "LambdaExecutionRole", "Arn" ]}
+                        },
+                        "Action": "secretsmanager:*",
+                        "Resource": "*"
+                    }]
+                },
+                "SecretId": {
+                    "Ref": "HeaderSecret"
+                }
+            }
+        }
+    }
+}
