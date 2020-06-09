@@ -1,5 +1,5 @@
 FUNCTIONNAME="IanTestSecretRotation"
-BUCKETNAME="digital-dev-lambda-code"
+BUCKETNAME="my-lambda-code"
 REGION="eu-west-1"
 PROFILE="b4c-digital-dev"
 
