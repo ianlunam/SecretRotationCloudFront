@@ -52,9 +52,10 @@ The script builds the zip file, creates the S3 bucket (if it doesn't exist) and 
 If the environment variable STACK_NAME is set it will attempt to extract the name of the lambda function from the stack and update the code.
 
 To create the stack:
-*    aws cloudformation create-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM
+`aws cloudformation create-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM`
+
 To update the stack:
-*    aws cloudformation update-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM
+`aws cloudformation update-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM`
 
 #### cloudformation.json
 Cloudformation template in json format to setup the secret and lambda
