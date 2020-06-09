@@ -12,7 +12,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.info("Starting")
 
-# session = boto3.session.Session(profile_name = 'b4c-digital-dev')
 session = boto3.session.Session()
 cft_client = session.client('cloudfront', region_name='eu-west-1')
 sm_client = session.client('secretsmanager', region_name='eu-west-1')
@@ -133,9 +132,6 @@ def set_secret(SecretId, token):
     CName = os.environ['CNAME']
     WaclName = os.environ['WACLNAME']
     HeaderName = os.environ['HEADERNAME']
-    # CName = 'crafter-del-s.dlgdigitalservices.com'
-    # WaclName = 'crafterELBdel'
-    # HeaderName = 'headername'
 
     distro, etag = getDistro(CName)
     byteMatchSet, tuple = getByteMatchSet(WaclName, HeaderName)
