@@ -11,7 +11,7 @@
         "BucketName": {
             "Description": "S3 bucket where your code is stored. Same as BUCKETNAME in build.sh",
             "Type": "String",
-            "Default": "digital-dev-lambda-code"
+            "Default": "my-lambda-code"
         },
         "SecretName": {
             "Description": "Name of the Secret",
