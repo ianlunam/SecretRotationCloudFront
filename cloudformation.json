@@ -4,14 +4,19 @@
 
     "Parameters": {
         "FunctionName": {
-            "Description": "Name of the Lambda. Same as FUNCTIONNAME in build.sh",
+            "Description": "Name of the Lambda.",
             "Type": "String",
             "Default": "IanTestSecretRotation"
         },
-        "BucketName": {
-            "Description": "S3 bucket where your code is stored. Same as BUCKETNAME in build.sh",
+        "S3Bucket": {
+            "Description": "S3 bucket where your code is stored. Same as S3Bucket in build.sh",
             "Type": "String",
             "Default": "my-lambda-code"
+        },
+        "S3Key": {
+            "Description": "S3 bucket where your code is stored. Same as S3Key in build.sh",
+            "Type": "String",
+            "Default": "package.zip"
         },
         "SecretName": {
             "Description": "Name of the Secret",
@@ -83,10 +88,10 @@
                 "Handler": "lambda_function.lambda_handler",
                 "Code": {
                     "S3Bucket": {
-                        "Ref": "BucketName"
+                        "Ref": "S3Bucket"
                     },
                     "S3Key": {
-                        "Fn::Sub": "${FunctionName}.zip"
+                        "Ref": "S3Key"
                     }
                 },
                 "Role": {

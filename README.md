@@ -3,18 +3,18 @@ Rotate AWS SecretsManager secret for CloudFront and WAF Custom Headers
 
 Most SecretsManager auto-rotation examples are for databases. I needed to update a CloudFront Custom Header and the associated WAF String Rule, using a random generated string.
 
-
 ## To get started:
-#### Create an S3 bucket
-Create a bucket in S3 to store your code. This can be a completely private bucket created with the same account you will use for your profile in the build.sh. Use it's name in the parameters below.
-
 #### Set the names of the bucket and lambda function
 Update the BucketName and FunctionName parameters in the top of build.sh and cloudformation.json, making sure the BucketName and FunctionName match across files.
 * FunctionName - this will be used as the name of the rotation Lambda
-* BucketName - the name of the bucket we can store code in
+* S3Bucket - the name of the bucket we can store code in
 
 #### Set your profile and region parameters
-Update the Region and Profile parameters in the top of build.sh to match your region and the profile you have defined in ~/.aws/credentials.
+Update your environment Region and Profile parameters as required, to match your region and the profile you have defined in ~/.aws/credentials.
+```
+export AWS_DEFAULT_REGION=us-west-1
+export AWS_PROFILE=my-profile
+```
 
 #### Set the CloudFront parameters and secret name
 Update the rest of the parameters in the top of cloudformation.json:
@@ -32,7 +32,7 @@ This step will create:
 * Lambda permissions to run and access CloudFront, SecretsManager, WAF and CloudWatch logs
 * Permissions for the Secret to run the Lambda
 
-Run `./build.sh create` to run the cloudformation and create the stack.
+Run `./build.sh` to build the lambda and upload it to your S3 bucket. Will also update the function if STACK_NAME is set.
 
 ## Files:
 * build.sh: Builds the zipfile for the lambda, uploads it to S3, updates the Lambda (or runs the cloudformation)
@@ -42,17 +42,19 @@ Run `./build.sh create` to run the cloudformation and create the stack.
 * lambda_function.py: The python code that does all the work.
 
 #### build.sh
-This script is designed to update the lambda. The bucket used for storing code must exist before running this.
+This script is designed to update the lambda.
 
-Make sure the region, profile, bucket name and lambda function name are what you want.
+Make sure you have set AWS_DEFAULT_REGION and AWS_PROFILE as required for your config.
+Make sure the bucket name and lambda function name are what you want.
 
-Can be run with different parameters:
-* `./build create` - to create the stack
-* `./build update` - to update the stack
-* `./build upload` - to update the Lambda only
-* `./build` - to update the Lambda only (same as with `upload`)
+The script builds the zip file, creates the S3 bucket (if it doesn't exist) and uploads the zip to the bucket.
 
-The script deletes anything old hanging around, installs the required modules from requirements.txt, zips it all up, uploads it to S3, and then, depending on the parameter passed, either creates or updates the cloudformation stack, or simply updates the Lambda, and finally deletes all the stuff the pip install did, leaving the zip file in place.
+If the environment variable STACK_NAME is set it will attempt to extract the name of the lambda function from the stack and update the code.
+
+To create the stack:
+*    aws cloudformation create-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM
+To update the stack:
+*    aws cloudformation update-stack --stack-name ${STACK_NAME} --template-body=file://cloudformation.json --capabilities CAPABILITY_IAM
 
 #### cloudformation.json
 Cloudformation template in json format to setup the secret and lambda
